@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: postgres_sales
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-sales_db}
+      - POSTGRES_USER=${POSTGRES_USER:-sales_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-sales_pass}
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sales_user} -d ${POSTGRES_DB:-sales_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    container_name: django_sales_app
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings
+      - DEBUG=1
+      - ALLOWED_HOSTS=*
+      # Postgres
+      - POSTGRES_DB=${POSTGRES_DB:-sales_db}
+      - POSTGRES_USER=${POSTGRES_USER:-sales_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-sales_pass}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      # JWT toggle: true = asegurado, false = sin seguridad
+      - USE_JWT=${USE_JWT:-false}
+    depends_on:
+      db:
+        condition: service_healthy
